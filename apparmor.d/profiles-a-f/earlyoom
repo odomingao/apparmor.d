@@ -10,6 +10,7 @@ include <tunables/global>
 profile earlyoom @{exec_path} {
   include <abstractions/base>
 
+  capability ipc_lock,
   capability kill,
 
   @{exec_path} mr,
