@@ -1,0 +1,140 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2024 Alexandre Pujol <alexandre@pujol.io>
+# Copyright (C) 2024 odomingao
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+@{terminals} = alacritty foot konsole* gnome-terminal
+@{term_path} = @{bin}/@{terminals}
+@{term_config_dir} = /etc/xdg/foot @{user_config_dirs}/@{terminals}
+@{term_data_dir} = @{lib}/@{terminals}
+
+@{exec_path} = @{bin}/bottles
+profile bottles /usr/bin/bottles flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/common/game>
+  include <abstractions/consoles>
+  include <abstractions/dconf-write>
+
+  network inet  dgram,
+  network inet6 dgram,
+  network inet  stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  @{coreutils_path} ix,
+  @{shells_path} ix,
+
+  @{term_path} rix,
+  @{term_data_dir}/{,**} r,
+  @{term_config_dir}/{,**} r,
+
+  @{bin}/ r,
+  @{bin}/cabextract ix,
+  @{bin}/gamemoderun rix,
+  @{bin}/gamescope ix,
+  @{bin}/gamescopereaper ix,
+  @{bin}/kill ix,
+  @{bin}/kmod ix,
+  @{bin}/lsmod ix,
+  @{bin}/lspci ix,
+  @{bin}/mangoapp ix,
+  @{bin}/mangohud rix,
+  @{bin}/pgrep ix,
+  @{bin}/xkbcomp ix,
+  @{bin}/Xwayland ix,
+
+  # System WINE
+  @{bin}/msidb ix,
+  @{bin}/msiexec ix,
+  @{bin}/notepad ix,
+  @{bin}/regedit ix,
+  @{bin}/regsvr32 ix,
+  @{bin}/wine* rix,
+
+  @{lib}/utempter/utempter ix,
+  @{lib}/wine/ r,
+  @{lib}/wine/** m,
+
+  /usr/share/bottles/{,**} r,
+  /usr/share/hwdata/pci.ids r,
+  /usr/share/wine/{,**} r,
+  /usr/share/wine/** m,
+
+  /etc/ r,
+  /etc/arch-release r,
+  /etc/fstab r,
+  /etc/lsb-release r,
+  /etc/mime.types r,
+  /etc/shells r,
+
+  /var/cache/ w,
+
+  /mnt/ r,
+  @{MOUNTS}/ r,
+
+  owner @{HOME}/@{rand8} rw,
+
+  # Unfortunately,  a few games like to clutter $HOME :(
+  owner @{HOME}/NBGI/{,**} rw, # Dark Souls Remastered
+
+  owner @{user_games_dirs}/** m,
+
+  owner @{user_cache_dirs}/gstreamer-@{int}.@{int}/registry.@{arch}.bin{,.tmp*} rw,
+  owner @{user_cache_dirs}/radv_builtin_shaders* rw,
+
+  owner @{user_config_dirs}/glib-2.0/{,**} rw,
+  owner @{user_config_dirs}/MangoHud/{,**} r,
+
+  owner @{user_share_dirs}/bottles/ rw,
+  owner @{user_share_dirs}/bottles/** mrwixkl,
+
+  owner /tmp/@{rand8} rw,
+  owner /tmp/tmp*.sh rwix,
+  owner /tmp/tmp@{rand8}.sh rwix,
+  owner /tmp/v_@{rand6} rw,
+  owner /tmp/.wine-@{uid}/{,**} rw,
+  owner /tmp/.wine-@{uid}/** mk,
+  owner @{run}/user/@{uid}/gamescope-@{int} w,
+  owner @{run}/user/@{uid}/gamescope-@{int}.lock rwk,
+  owner @{run}/user/@{uid}/gamescope-@{int}-ei w,
+  owner @{run}/user/@{uid}/gamescope-@{int}-ei.lock rwk,
+  owner @{run}/user/@{uid}/gamescope-limiter-@{rand8} rw,
+  owner @{run}/user/@{uid}/gamescope-shm-@{rand8} rw,
+  owner @{run}/user/@{uid}/server-@{int}.xkm rw,
+  owner /dev/shm/wine-* rw,
+
+        @{sys}/devices/@{pci}/**/abs r,
+        @{sys}/devices/@{pci}/**/ev r,
+        @{sys}/devices/@{pci}/**/key r,
+        @{sys}/devices/@{pci}/**/rel r,
+
+        @{PROC}/ r,
+        @{PROC}/@{pid}/cgroup r,
+        @{PROC}/@{pid}/cmdline r,
+        @{PROC}/@{pid}/map_files/ r,
+        @{PROC}/@{pid}/net/dev r,
+        @{PROC}/@{pid}/net/ipv6_route r,
+        @{PROC}/@{pid}/net/route r,
+        @{PROC}/@{pid}/stat r,
+        @{PROC}/bus/pci/@{int}/{,**} r,
+        @{PROC}/bus/pci/devices r,
+        @{PROC}/cmdline r,
+        @{PROC}/sys/net/core/bpf_jit_enable r,
+        @{PROC}/sys/net/ipv6/conf/all/disable_ipv6 r,
+        @{PROC}/tty/drivers r,
+  owner @{PROC}/@{pid}/environ r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  owner /dev/pts/ptmx rw,
+  owner /dev/tty@{int} rw, # file_inherit
+
+  include if exists <local/bottles>
+}
+
+# vim:syntax=apparmor
